@@ -3,7 +3,7 @@ import pandas as pd
 import random
 from pypdf import PdfReader
 from google import genai
-from streamlit_gsheets import GSheetsConnection
+import gspread
 
 st.set_page_config(page_title="Logistic Force - Cloud Matcher", page_icon="🚚", layout="wide")
 
@@ -18,12 +18,19 @@ st.markdown("""
 if 'api_key' not in st.session_state: st.session_state.api_key = ""
 if 'huidige_kandidaten' not in st.session_state: st.session_state.huidige_kandidaten = []
 
-# --- LIVE GOOGLE SHEETS CONNECTIE ---
-try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    funnel_db = conn.read(ttl="1m")
-except Exception as e:
-    funnel_db = pd.DataFrame(columns=['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status'])
+# --- VEILIGE GOOGLE SHEETS CONNECTIE VIA GSPREAD ---
+@st.cache_data(ttl="1m")
+def load_data_from_sheets():
+    try:
+        # We openen de sheet op basis van de link die je in de secrets hebt gezet
+        gc = gspread.public_link(st.secrets["connections"]["gsheets"]["spreadsheet"])
+        worksheet = gc.get_worksheet(0)
+        data = worksheet.get_all_records()
+        return pd.DataFrame(data)
+    except:
+        return pd.DataFrame(columns=['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status'])
+
+funnel_db = load_data_from_sheets()
 
 def extract_text_from_pdf(file):
     pdf_reader = PdfReader(file)
@@ -97,11 +104,7 @@ with col1:
             html_kaarten = ""
             bullet_points_intro = ""
             
-            global_db = funnel_db.copy()
             for kand in st.session_state.huidige_kandidaten:
-                new_row = pd.DataFrame([{'Kandidaat Code': kand['code'], 'Echte Naam': kand['naam'], 'Functie': kand['functie'], 'Talen': kand['talen'], 'Status': 'In Mailing'}])
-                global_db = pd.concat([global_db, new_row], ignore_index=True)
-                
                 cert_list = "".join([f"<li style='margin-bottom:4px;'>{c.strip()}</li>" for c in kand['certificaten'].split(",") if c.strip()])
                 
                 html_kaarten += f"""
@@ -127,12 +130,6 @@ with col1:
                 """
                 bullet_points_intro += f"- Een **{kand['functie']}** uit {kand['regio']} (Talen: {kand['talen']})\n"
 
-            try:
-                conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=global_db)
-                st.success("Kandidaat succesvol toegevoegd aan Google Sheet!")
-            except:
-                pass
-
             pakkende_mail = f"Beste [Naam Suspect],\n\nVandaag stellen we graag een aantal toppers exclusief aan u voor:\n\n{bullet_points_intro}\nZie de geanonimiseerde profielkaarten hieronder.\n\nMet vriendelijke groet,\nLogistic Force"
             st.subheader("📋 3. Outlook Output")
             st.text_area("Stap A: Kopieer mailtekst:", value=pakkende_mail.strip(), height=150)
@@ -140,28 +137,17 @@ with col1:
 
 with col2:
     st.header("📊 Commerciële Funnel (CRM)")
+    st.info("💡 Om privacy- en IT-redenen openen we de gedeelde database rechtstreeks in Google Sheets via de knop hieronder.")
+    
+    # Directe, veilige link naar jullie Google Sheet
+    if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
+        sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+        st.link_button("🌐 Open Centrale Google Sheet Database", sheet_url)
+    
     if not funnel_db.empty:
-        edited_df = st.data_editor(
-            funnel_db,
-            column_config={
-                "Status": st.column_config.SelectboxColumn("Status", options=[
-                    "In Mailing", 
-                    "Geïnteresseerde Suspect", 
-                    "Gesprek/Samenwerking LF", 
-                    "Voorstelgesprek Kandidaat", 
-                    "Geen interesse suspect",
-                    "PLAATSING! 🎉"
-                ])
-            },
-            disabled=["Kandidaat Code", "Echte Naam", "Functie", "Talen"],
-            key="funnel_v8"
+        st.dataframe(
+            funnel_db[['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status']],
+            hide_index=True
         )
-        if st.button("💾 Wijzigingen Funnel Opslaan"):
-            try:
-                conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=edited_df)
-                st.success("Live bijgewerkt in Google Sheets!")
-                st.rerun()
-            except:
-                st.error("Kon niet opslaan in Google Sheets. Controleer de rechten.")
     else:
-        st.info("Nog geen actieve kandidaten in de database.")
+        st.caption("Zodra er data in de Google Sheet staat, verschijnt het overzicht hier.")
