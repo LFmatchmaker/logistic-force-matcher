@@ -1,4 +1,4 @@
 google-genai
 pypdf
 pandas
-streamlit-gsheets
+st-gsheets-connection==0.0.3
