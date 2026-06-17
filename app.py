@@ -92,4 +92,4 @@ with col1:
                             st.error(f"Fout bij {file.name}: {e}")
                 st.success("Analyse voltooid!")
 
-    if st.session_state.huidige_kandidaten
+    if st.session_state.huidige_kandidaten:
