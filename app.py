@@ -3,6 +3,7 @@ import pandas as pd
 import random
 from pypdf import PdfReader
 from google import genai
+from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Logistic Force - Cloud Matcher", page_icon="🚚", layout="wide")
 
@@ -15,12 +16,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 if 'api_key' not in st.session_state: st.session_state.api_key = ""
-
-# Veilige, stabiele online opslag in het browsergeheugen
-if 'funnel_db' not in st.session_state:
-    st.session_state.funnel_db = pd.DataFrame(columns=['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status'])
-
 if 'huidige_kandidaten' not in st.session_state: st.session_state.huidige_kandidaten = []
+
+# --- LIVE GOOGLE SHEETS CONNECTIE ---
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    funnel_db = conn.read(ttl="1m")
+except Exception as e:
+    funnel_db = pd.DataFrame(columns=['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status'])
 
 def extract_text_from_pdf(file):
     pdf_reader = PdfReader(file)
@@ -30,7 +33,7 @@ def extract_text_from_pdf(file):
     return text
 
 st.title("🚚 Logistic Force - Cloud Matcher & CRM")
-st.caption("🌐 Centraal platform voor het hele team.")
+st.caption("🌐 Centraal platform voor het hele team gekoppeld aan Google Sheets.")
 
 with st.sidebar:
     st.header("⚙️ Instellingen")
@@ -94,9 +97,10 @@ with col1:
             html_kaarten = ""
             bullet_points_intro = ""
             
+            global_db = funnel_db.copy()
             for kand in st.session_state.huidige_kandidaten:
                 new_row = pd.DataFrame([{'Kandidaat Code': kand['code'], 'Echte Naam': kand['naam'], 'Functie': kand['functie'], 'Talen': kand['talen'], 'Status': 'In Mailing'}])
-                st.session_state.funnel_db = pd.concat([st.session_state.funnel_db, new_row], ignore_index=True)
+                global_db = pd.concat([global_db, new_row], ignore_index=True)
                 
                 cert_list = "".join([f"<li style='margin-bottom:4px;'>{c.strip()}</li>" for c in kand['certificaten'].split(",") if c.strip()])
                 
@@ -123,6 +127,12 @@ with col1:
                 """
                 bullet_points_intro += f"- Een **{kand['functie']}** uit {kand['regio']} (Talen: {kand['talen']})\n"
 
+            try:
+                conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=global_db)
+                st.success("Kandidaat succesvol toegevoegd aan Google Sheet!")
+            except:
+                pass
+
             pakkende_mail = f"Beste [Naam Suspect],\n\nVandaag stellen we graag een aantal toppers exclusief aan u voor:\n\n{bullet_points_intro}\nZie de geanonimiseerde profielkaarten hieronder.\n\nMet vriendelijke groet,\nLogistic Force"
             st.subheader("📋 3. Outlook Output")
             st.text_area("Stap A: Kopieer mailtekst:", value=pakkende_mail.strip(), height=150)
@@ -130,9 +140,9 @@ with col1:
 
 with col2:
     st.header("📊 Commerciële Funnel (CRM)")
-    if not st.session_state.funnel_db.empty:
+    if not funnel_db.empty:
         edited_df = st.data_editor(
-            st.session_state.funnel_db,
+            funnel_db,
             column_config={
                 "Status": st.column_config.SelectboxColumn("Status", options=[
                     "In Mailing", 
@@ -144,10 +154,14 @@ with col2:
                 ])
             },
             disabled=["Kandidaat Code", "Echte Naam", "Functie", "Talen"],
-            key="funnel_v7"
+            key="funnel_v8"
         )
         if st.button("💾 Wijzigingen Funnel Opslaan"):
-            st.session_state.funnel_db = edited_df
-            st.success("Live bijgewerkt!")
+            try:
+                conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=edited_df)
+                st.success("Live bijgewerkt in Google Sheets!")
+                st.rerun()
+            except:
+                st.error("Kon niet opslaan in Google Sheets. Controleer de rechten.")
     else:
         st.info("Nog geen actieve kandidaten in de database.")
