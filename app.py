@@ -6,7 +6,6 @@ from google import genai
 
 st.set_page_config(page_title="Logistic Force - Cloud Matcher", page_icon="🚚", layout="wide")
 
-# Huisstijl Styling
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -17,16 +16,9 @@ st.markdown("""
 
 if 'api_key' not in st.session_state: st.session_state.api_key = ""
 
-# --- CLOUD DATABASE (Google Sheets connectie) ---
-# We gebruiken st.secrets zodat wachtwoorden en sheets veilig verborgen blijven voor buitenstaanders
+# Veilige, stabiele online opslag in het browsergeheugen
 if 'funnel_db' not in st.session_state:
-    try:
-        # Als de cloud-koppeling straks live staat, leest hij live de Google Sheet uit
-        conn = st.connection("gsheets", type=st.connections.SQLConnection)
-        st.session_state.funnel_db = conn.query("SELECT * FROM Funnel", ttl=5)
-    except:
-        # Zolang we lokaal testen, houdt hij een tijdelijke lijst bij zodat de app niet crasht
-        st.session_state.funnel_db = pd.DataFrame(columns=['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status'])
+    st.session_state.funnel_db = pd.DataFrame(columns=['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status'])
 
 if 'huidige_kandidaten' not in st.session_state: st.session_state.huidige_kandidaten = []
 
@@ -38,7 +30,7 @@ def extract_text_from_pdf(file):
     return text
 
 st.title("🚚 Logistic Force - Cloud Matcher & CRM")
-st.caption("🌐 Centraal platform voor het hele team. Gegevens worden live gesynchroniseerd.")
+st.caption("🌐 Centraal platform voor het hele team.")
 
 with st.sidebar:
     st.header("⚙️ Instellingen")
@@ -106,13 +98,6 @@ with col1:
                 new_row = pd.DataFrame([{'Kandidaat Code': kand['code'], 'Echte Naam': kand['naam'], 'Functie': kand['functie'], 'Talen': kand['talen'], 'Status': 'In Mailing'}])
                 st.session_state.funnel_db = pd.concat([st.session_state.funnel_db, new_row], ignore_index=True)
                 
-                # Sla live op in Google Sheets (indien verbonden)
-                try:
-                    conn = st.connection("gsheets", type=st.connections.SQLConnection)
-                    # Query om rij toe te voegen in de cloud sheet
-                except:
-                    pass # Offline modus
-                
                 cert_list = "".join([f"<li style='margin-bottom:4px;'>{c.strip()}</li>" for c in kand['certificaten'].split(",") if c.strip()])
                 
                 html_kaarten += f"""
@@ -154,15 +139,15 @@ with col2:
                     "Geïnteresseerde Suspect", 
                     "Gesprek/Samenwerking LF", 
                     "Voorstelgesprek Kandidaat", 
-                    "Geen interesse suspect",  # <-- DE NIEUWE REDEN STAAT ERIN!
+                    "Geen interesse suspect",
                     "PLAATSING! 🎉"
                 ])
             },
             disabled=["Kandidaat Code", "Echte Naam", "Functie", "Talen"],
-            key="funnel_v6"
+            key="funnel_v7"
         )
         if st.button("💾 Wijzigingen Funnel Opslaan"):
             st.session_state.funnel_db = edited_df
-            st.success("Live bijgewerkt in het CRM!")
+            st.success("Live bijgewerkt!")
     else:
         st.info("Nog geen actieve kandidaten in de database.")
