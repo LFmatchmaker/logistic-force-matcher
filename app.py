@@ -3,7 +3,6 @@ import pandas as pd
 import random
 from pypdf import PdfReader
 from google import genai
-import gspread
 
 st.set_page_config(page_title="Logistic Force - Cloud Matcher", page_icon="🚚", layout="wide")
 
@@ -18,20 +17,6 @@ st.markdown("""
 if 'api_key' not in st.session_state: st.session_state.api_key = ""
 if 'huidige_kandidaten' not in st.session_state: st.session_state.huidige_kandidaten = []
 
-# --- VEILIGE GOOGLE SHEETS CONNECTIE VIA GSPREAD ---
-@st.cache_data(ttl="1m")
-def load_data_from_sheets():
-    try:
-        # We openen de sheet op basis van de link die je in de secrets hebt gezet
-        gc = gspread.public_link(st.secrets["connections"]["gsheets"]["spreadsheet"])
-        worksheet = gc.get_worksheet(0)
-        data = worksheet.get_all_records()
-        return pd.DataFrame(data)
-    except:
-        return pd.DataFrame(columns=['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status'])
-
-funnel_db = load_data_from_sheets()
-
 def extract_text_from_pdf(file):
     pdf_reader = PdfReader(file)
     text = ""
@@ -40,7 +25,7 @@ def extract_text_from_pdf(file):
     return text
 
 st.title("🚚 Logistic Force - Cloud Matcher & CRM")
-st.caption("🌐 Centraal platform voor het hele team gekoppeld aan Google Sheets.")
+st.caption("🌐 Centraal platform voor het hele team.")
 
 with st.sidebar:
     st.header("⚙️ Instellingen")
@@ -136,18 +121,24 @@ with col1:
             st.components.v1.html(html_kaarten, height=500)
 
 with col2:
-    st.header("📊 Commerciële Funnel (CRM)")
-    st.info("💡 Om privacy- en IT-redenen openen we de gedeelde database rechtstreeks in Google Sheets via de knop hieronder.")
+    st.header("📊 CRM Handmatige Input")
     
-    # Directe, veilige link naar jullie Google Sheet
-    if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
-        sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
-        st.link_button("🌐 Open Centrale Google Sheet Database", sheet_url)
-    
-    if not funnel_db.empty:
-        st.dataframe(
-            funnel_db[['Kandidaat Code', 'Echte Naam', 'Functie', 'Talen', 'Status']],
-            hide_index=True
-        )
+    # Als er geanalyseerde kandidaten zijn, maken we er een kant-en-klare Excel-rij van
+    if st.session_state.huidige_kandidaten:
+        st.write("📋 Kopieer deze regels en plak ze onderaan je Google Sheet:")
+        
+        export_data = []
+        for kand in st.session_state.huidige_kandidaten:
+            export_data.append({
+                'Kandidaat Code': kand['code'],
+                'Echte Naam': kand['naam'],
+                'Functie': kand['functie'],
+                'Talen': kand['talen'],
+                'Status': 'In Mailing'
+            })
+        
+        df_export = pd.DataFrame(export_data)
+        st.dataframe(df_export, hide_index=True)
+        st.caption("💡 Selecteer de cellen in de tabel hierboven, druk op Cmd+C (of Ctrl+C) en plak ze direct in je Google Sheet.")
     else:
-        st.caption("Zodra er data in de Google Sheet staat, verschijnt het overzicht hier.")
+        st.info("Zodra je CV's uploadt en op analyseren klikt, verschijnen hier de kant-en-klare Excel-rijen voor je Google Sheet.")
