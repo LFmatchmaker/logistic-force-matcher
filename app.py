@@ -73,7 +73,7 @@ with col1:
                             {cv_tekst}
                             """
                             
-                            response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                            response = client.models.generate_content(model='gemini-2.5-pro', contents=prompt)
                             output = response.text
                             
                             kandidaat_data = {"code": f"LF-{random.randint(100, 999)}", "naam": "", "functie": "", "talen": "", "regio": "", "beschikbaarheid": "", "ervaring": "", "certificaten": "", "profiel": ""}
@@ -132,7 +132,7 @@ with col1:
                     Sluit af met een sterke call-to-action (bijvoorbeeld: 'Wilt u morgen al kennismaken met een van deze toppers? Laat het me direct weten, dan plan ik het in.').
                     Gebruik '[Naam Suspect]' als aanhef en sluit af met 'Met vriendelijke groet, Logistic Force'.
                     """
-                    mail_response = client.models.generate_content(model='gemini-2.5-flash', contents=mail_prompt)
+                    mail_response = client.models.generate_content(model='gemini-2.5-pro', contents=mail_prompt)
                     commerciele_mail = mail_response.text
                 except Exception as e:
                     commerciele_mail = f"Beste [Naam Suspect],\n\n(Fout bij genereren verkooptekst: {e})\n\nMet vriendelijke groet,\nLogistic Force"
