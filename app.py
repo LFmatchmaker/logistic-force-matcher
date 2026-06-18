@@ -87,7 +87,7 @@ with col1:
 
         if st.button("📊 Genereer Gecombineerde Outlook Mailing"):
             html_kaarten = ""
-            bullet_points_intro = ""
+            kandidaten_samenvatting_voor_prompt = ""
             
             for kand in st.session_state.huidige_kandidaten:
                 cert_list = "".join([f"<li style='margin-bottom:4px;'>{c.strip()}</li>" for c in kand['certificaten'].split(",") if c.strip()])
@@ -113,11 +113,32 @@ with col1:
                     <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #b0b0b0;">{cert_list}</ul>
                 </div>
                 """
-                bullet_points_intro += f"- Een **{kand['functie']}** uit {kand['regio']} (Talen: {kand['talen']})\n"
+                kandidaten_samenvatting_voor_prompt += f"- Code: {kand['code']}, Functie: {kand['functie']}, Regio: {kand['regio']}, Talen: {kand['talen']}, Profiel: {kand['profiel']}\n"
 
-            pakkende_mail = f"Beste [Naam Suspect],\n\nVandaag stellen we graag een aantal toppers exclusief aan u voor:\n\n{bullet_points_intro}\nZie de geanonimiseerde profielkaarten hieronder.\n\nMet vriendelijke groet,\nLogistic Force"
+            # AI ingeschakeld om de ultieme verkoopbrief te schrijven
+            with st.spinner("AI genereert een krachtige, commerciële begeleidende mail..."):
+                try:
+                    client = genai.Client(api_key=st.session_state.api_key)
+                    mail_prompt = f"""
+                    Schrijf een krachtige, enthousiaste en commerciële B2B-begeleidende e-mail namens Logistic Force, gericht aan een potentieel bedrijf (suspect). 
+                    Het doel is om hen te overtuigen om met Logistic Force in zee te gaan aan de hand van deze specifieke toptalenten die we vandaag beschikbaar hebben.
+                    
+                    De e-mail moet professioneel, overtuigend en vlot geschreven zijn. Geen standaard saai mailtje, maar een tekst die de suspect activeert om te reageren.
+                    Begin met een sterke opening over de uitdagingen op de logistieke arbeidsmarkt en hoe Logistic Force dé oplossing biedt met direct inzetbaar personeel.
+                    
+                    Lijst de volgende kandidaten kort en krachtig op met bullet points (gebruik hun codes, GEEN echte namen):
+                    {kandidaten_samenvatting_voor_prompt}
+                    
+                    Sluit af met een sterke call-to-action (bijvoorbeeld: 'Wilt u morgen al kennismaken met een van deze toppers? Laat het me direct weten, dan plan ik het in.').
+                    Gebruik '[Naam Suspect]' als aanhef en sluit af met 'Met vriendelijke groet, Logistic Force'.
+                    """
+                    mail_response = client.models.generate_content(model='gemini-2.5-flash', contents=mail_prompt)
+                    commerciele_mail = mail_response.text
+                except Exception as e:
+                    commerciele_mail = f"Beste [Naam Suspect],\n\n(Fout bij genereren verkooptekst: {e})\n\nMet vriendelijke groet,\nLogistic Force"
+
             st.subheader("📋 3. Outlook Output")
-            st.text_area("Stap A: Kopieer mailtekst:", value=pakkende_mail.strip(), height=150)
+            st.text_area("Stap A: Kopieer commerciële mailtekst:", value=commerciele_mail.strip(), height=300)
             st.components.v1.html(html_kaarten, height=500)
 
 with col2:
