@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import random
+import time
 from pypdf import PdfReader
 from google import genai
 
@@ -73,7 +74,8 @@ with col1:
                             {cv_tekst}
                             """
                             
-                            response = client.models.generate_content(model='gemini-2.5-pro', contents=prompt)
+                            # We gebruiken hier weer het GRATIS flash model
+                            response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
                             output = response.text
                             
                             kandidaat_data = {"code": f"LF-{random.randint(100, 999)}", "naam": "", "functie": "", "talen": "", "regio": "", "beschikbaarheid": "", "ervaring": "", "certificaten": "", "profiel": ""}
@@ -88,6 +90,10 @@ with col1:
                                 if line.startswith("PROFIEL:"): kandidaat_data["profiel"] = line.replace("PROFIEL:", "").strip()
                             
                             st.session_state.huidige_kandidaten.append(kandidaat_data)
+                            
+                            # Een kleine pauze van 1.5 seconde om de gratis Google-limieten te respecteren
+                            time.sleep(1.5)
+                            
                         except Exception as e:
                             st.error(f"Fout bij {file.name}: {e}")
                 st.success("Analyse voltooid!")
@@ -111,7 +117,6 @@ with col1:
             
             for kand in st.session_state.huidige_kandidaten:
                 cert_list = "".join([f"<li style='margin-bottom:4px;'>{c.strip()}</li>" for c in kand['certificaten'].split(",") if c.strip()])
-                
                 kaart_html = f"""<div style="background-color: #1a1a1a; color: #ffffff; padding: 25px; border-radius: 10px; border-left: 8px solid #A3C639; font-family: 'Segoe UI', Arial, sans-serif; width: 500px; margin-bottom: 25px;"><table style="width: 100%; border-collapse: collapse;"><tr><td><span style="color: #ffffff; font-weight: bold; font-size: 20px; font-family: Arial, sans-serif;">LOGISTIC FORCE</span></td><td style="text-align: right; color: #A3C639; font-weight: bold; font-size: 14px; vertical-align: middle;">CODE: {kand['code']}</td></tr></table><hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;"><h3 style="color: #ffffff; margin: 0 0 5px 0; font-size: 20px;">{kand['functie']}</h3><p style="margin: 0 0 15px 0; color: #A3C639; font-style: italic; font-size: 13px;">{kand['profiel']}</p><table style="width: 100%; font-size: 13px; color: #e0e0e0; margin-bottom: 15px;"><tr><td style="padding: 3px 0; width: 130px;"><b>📍 Woonregio:</b></td><td>{kand['regio']}</td></tr><tr><td style="padding: 3px 0;"><b>🗣️ Talenkennis:</b></td><td><b>{kand['talen']}</b></td></tr><tr><td style="padding: 3px 0;"><b>⏰ Beschikbaarheid:</b></td><td>{kand['beschikbaarheid']}</td></tr><tr><td style="padding: 3px 0; vertical-align: top;"><b>💼 Ervaring:</b></td><td>{kand['ervaring']}</td></tr></table><h4 style="color: #A3C639; margin: 10px 0 5px 0; font-size: 14px;">Certificaten & Kwaliteiten:</h4><ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #b0b0b0;">{cert_list}</ul></div>"""
                 html_kaarten += kaart_html
                 kandidaten_samenvatting_voor_prompt += f"- Code: {kand['code']}, Functie: {kand['functie']}, Regio: {kand['regio']}, Talen: {kand['talen']}, Profiel: {kand['profiel']}\n"
@@ -123,7 +128,7 @@ with col1:
                     Schrijf een krachtige, enthousiaste en commerciële B2B-begeleidende e-mail namens Logistic Force, gericht aan een potentieel bedrijf (suspect). 
                     Het doel is om hen te overtuigen om met Logistic Force in zee te gaan aan de hand van deze specifieke toptalenten die we vandaag beschikbaar hebben.
                     
-                    De e-mail moet professioneel, overtuigend ogend en vlot geschreven zijn. Geen standaard saai mailtje, maar een tekst die de suspect activeert om te reageren.
+                    De e-mail moet professioneel, overtuigend ogend van toon en vlot geschreven zijn. Geen standaard saai mailtje, maar een tekst die de suspect activeert om te reageren.
                     Begin met een sterke opening over de uitdagingen op de logistieke arbeidsmarkt en hoe Logistic Force dé oplossing biedt met direct inzetbaar personeel.
                     
                     Lijst de volgende kandidaten kort en krachtig op met bullet points (gebruik hun codes, GEEN echte namen):
@@ -132,7 +137,8 @@ with col1:
                     Sluit af met een sterke call-to-action (bijvoorbeeld: 'Wilt u morgen al kennismaken met een van deze toppers? Laat het me direct weten, dan plan ik het in.').
                     Gebruik '[Naam Suspect]' als aanhef en sluit af met 'Met vriendelijke groet, Logistic Force'.
                     """
-                    mail_response = client.models.generate_content(model='gemini-2.5-pro', contents=mail_prompt)
+                    # Ook hier weer de gratis flash versie
+                    mail_response = client.models.generate_content(model='gemini-2.5-flash', contents=mail_prompt)
                     commerciele_mail = mail_response.text
                 except Exception as e:
                     commerciele_mail = f"Beste [Naam Suspect],\n\n(Fout bij genereren verkooptekst: {e})\n\nMet vriendelijke groet,\nLogistic Force"
