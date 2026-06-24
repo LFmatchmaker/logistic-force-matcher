@@ -86,8 +86,8 @@ with col1:
                             {cv_tekst}
                             """
                             
-                            # Gebruik van het stabielere 1.5-flash model met automatische herlooppoging
-                            output = generate_content_with_retry(client, 'gemini-1.5-flash', prompt)
+                            # Gecorrigeerde modelnaam voor de nieuwe SDK
+                            output = generate_content_with_retry(client, 'gemini-1.5-flash-002', prompt)
                             
                             kandidaat_data = {"code": f"LF-{random.randint(100, 999)}", "naam": "", "functie": "", "talen": "", "regio": "", "beschikbaarheid": "", "ervaring": "", "certificaten": "", "profiel": ""}
                             for line in output.split('\n'):
@@ -146,8 +146,8 @@ with col1:
                     Sluit af met een sterke call-to-action (bijvoorbeeld: 'Wilt u morgen al kennismaken met een van deze toppers? Laat het me direct weten, dan plan ik het in.').
                     Gebruik '[Naam Suspect]' als aanhef en sluit af met 'Met vriendelijke groet, Logistic Force'.
                     """
-                    # Automatische retry ook voor de e-mailtekst
-                    commerciele_mail = generate_content_with_retry(client, 'gemini-1.5-flash', mail_prompt)
+                    # Gecorrigeerde modelnaam ook voor de e-mailtekst
+                    commerciele_mail = generate_content_with_retry(client, 'gemini-1.5-flash-002', mail_prompt)
                 except Exception as e:
                     commerciele_mail = f"Beste [Naam Suspect],\n\n(Fout bij genereren verkooptekst: {e})\n\nMet vriendelijke groet,\nLogistic Force"
 
@@ -158,7 +158,7 @@ with col1:
 with col2:
     st.header("📊 CRM Handmatige Input")
     if st.session_state.huidige_kandidaten:
-        st.write("📋 Kopieer deze regels en plak ze onderaan je Google Sheet:")
+        st.write("📋 Kopieer deze regels hematig en plak ze onderaan je Google Sheet:")
         export_data = []
         for kand in st.session_state.huidige_kandidaten:
             export_data.append({
