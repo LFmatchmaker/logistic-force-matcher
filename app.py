@@ -25,6 +25,18 @@ def extract_text_from_pdf(file):
         text += page.extract_text() or ""
     return text
 
+def generate_content_with_retry(client, model_name, contents, max_retries=3):
+    """Functie die bij een 503 serverfout automatisch tot 3 keer opnieuw probeert met een korte pauze."""
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(model=model_name, contents=contents)
+            return response.text
+        except Exception as e:
+            if "503" in str(e) and attempt < max_retries - 1:
+                time.sleep(2)  # Wacht 2 seconden voor de volgende poging
+                continue
+            raise e
+
 st.title("🚚 Logistic Force - Cloud Matcher & CRM")
 st.caption("🌐 Centraal platform voor het hele team.")
 
@@ -74,9 +86,8 @@ with col1:
                             {cv_tekst}
                             """
                             
-                            # We gebruiken hier weer het GRATIS flash model
-                            response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-                            output = response.text
+                            # Gebruik van het stabielere 1.5-flash model met automatische herlooppoging
+                            output = generate_content_with_retry(client, 'gemini-1.5-flash', prompt)
                             
                             kandidaat_data = {"code": f"LF-{random.randint(100, 999)}", "naam": "", "functie": "", "talen": "", "regio": "", "beschikbaarheid": "", "ervaring": "", "certificaten": "", "profiel": ""}
                             for line in output.split('\n'):
@@ -90,9 +101,7 @@ with col1:
                                 if line.startswith("PROFIEL:"): kandidaat_data["profiel"] = line.replace("PROFIEL:", "").strip()
                             
                             st.session_state.huidige_kandidaten.append(kandidaat_data)
-                            
-                            # Een kleine pauze van 1.5 seconde om de gratis Google-limieten te respecteren
-                            time.sleep(1.5)
+                            time.sleep(1.0)
                             
                         except Exception as e:
                             st.error(f"Fout bij {file.name}: {e}")
@@ -137,9 +146,8 @@ with col1:
                     Sluit af met een sterke call-to-action (bijvoorbeeld: 'Wilt u morgen al kennismaken met een van deze toppers? Laat het me direct weten, dan plan ik het in.').
                     Gebruik '[Naam Suspect]' als aanhef en sluit af met 'Met vriendelijke groet, Logistic Force'.
                     """
-                    # Ook hier weer de gratis flash versie
-                    mail_response = client.models.generate_content(model='gemini-2.5-flash', contents=mail_prompt)
-                    commerciele_mail = mail_response.text
+                    # Automatische retry ook voor de e-mailtekst
+                    commerciele_mail = generate_content_with_retry(client, 'gemini-1.5-flash', mail_prompt)
                 except Exception as e:
                     commerciele_mail = f"Beste [Naam Suspect],\n\n(Fout bij genereren verkooptekst: {e})\n\nMet vriendelijke groet,\nLogistic Force"
 
