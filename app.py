@@ -86,8 +86,8 @@ with col1:
                             {cv_tekst}
                             """
                             
-                            # Gecorrigeerde modelnaam voor de nieuwe SDK
-                            output = generate_content_with_retry(client, 'gemini-1.5-flash-002', prompt)
+                            # Gebruik van het ondersteunde gemini-2.5-flash model met automatische herlooppoging
+                            output = generate_content_with_retry(client, 'gemini-2.5-flash', prompt)
                             
                             kandidaat_data = {"code": f"LF-{random.randint(100, 999)}", "naam": "", "functie": "", "talen": "", "regio": "", "beschikbaarheid": "", "ervaring": "", "certificaten": "", "profiel": ""}
                             for line in output.split('\n'):
@@ -144,10 +144,10 @@ with col1:
                     {kandidaten_samenvatting_voor_prompt}
                     
                     Sluit af met een sterke call-to-action (bijvoorbeeld: 'Wilt u morgen al kennismaken met een van deze toppers? Laat het me direct weten, dan plan ik het in.').
-                    Gebruik '[Naam Suspect]' als aanhef en sluit af met 'Met vriendelijke groet, Logistic Force'.
+                    Gebruik '[Naam Suspect]' als aanhef and sluit af met 'Met vriendelijke groet, Logistic Force'.
                     """
-                    # Gecorrigeerde modelnaam ook voor de e-mailtekst
-                    commerciele_mail = generate_content_with_retry(client, 'gemini-1.5-flash-002', mail_prompt)
+                    # Gebruik van het ondersteunde gemini-2.5-flash model met automatische herlooppoging
+                    commerciele_mail = generate_content_with_retry(client, 'gemini-2.5-flash', mail_prompt)
                 except Exception as e:
                     commerciele_mail = f"Beste [Naam Suspect],\n\n(Fout bij genereren verkooptekst: {e})\n\nMet vriendelijke groet,\nLogistic Force"
 
@@ -158,7 +158,7 @@ with col1:
 with col2:
     st.header("📊 CRM Handmatige Input")
     if st.session_state.huidige_kandidaten:
-        st.write("📋 Kopieer deze regels hematig en plak ze onderaan je Google Sheet:")
+        st.write("📋 Kopieer deze regels handmatig en plak ze onderaan je Google Sheet:")
         export_data = []
         for kand in st.session_state.huidige_kandidaten:
             export_data.append({
